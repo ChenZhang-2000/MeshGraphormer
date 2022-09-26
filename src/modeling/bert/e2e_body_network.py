@@ -69,8 +69,8 @@ class Graphormer_Body_Network(torch.nn.Module):
             # apply mask vertex/joint modeling
             # meta_masks is a tensor of all the masks, randomly generated in dataloader
             # we pre-define a [MASK] token, which is a floating-value vector with 0.01s
-            special_token = torch.ones_like(features[:,:-49,:]).cuda()*0.01
-            features[:,:-49,:] = features[:,:-49,:]*meta_masks + special_token*(1-meta_masks)          
+            special_token = torch.ones_like(features[:, :-49, :]).cuda()*0.01
+            features[:, :-49, :] = features[:, :-49, :]*meta_masks + special_token*(1-meta_masks)
 
         # forward pass
         if self.config.output_attentions==True:
@@ -78,22 +78,22 @@ class Graphormer_Body_Network(torch.nn.Module):
         else:
             features = self.trans_encoder(features)
 
-        pred_3d_joints = features[:,:num_joints,:]
-        pred_vertices_sub2 = features[:,num_joints:-49,:]
+        pred_3d_joints = features[:, :num_joints, :]
+        pred_vertices_sub2 = features[:, num_joints:-49, :]
 
         # learn camera parameters
         x = self.cam_param_fc(pred_vertices_sub2)
-        x = x.transpose(1,2)
+        x = x.transpose(1, 2)
         x = self.cam_param_fc2(x)
         x = self.cam_param_fc3(x)
-        cam_param = x.transpose(1,2)
+        cam_param = x.transpose(1, 2)
         cam_param = cam_param.squeeze()
 
-        temp_transpose = pred_vertices_sub2.transpose(1,2)
+        temp_transpose = pred_vertices_sub2.transpose(1, 2)
         pred_vertices_sub = self.upsampling(temp_transpose)
         pred_vertices_full = self.upsampling2(pred_vertices_sub)
-        pred_vertices_sub = pred_vertices_sub.transpose(1,2)
-        pred_vertices_full = pred_vertices_full.transpose(1,2)
+        pred_vertices_sub = pred_vertices_sub.transpose(1, 2)
+        pred_vertices_full = pred_vertices_full.transpose(1, 2)
 
         if self.config.output_attentions==True:
             return cam_param, pred_3d_joints, pred_vertices_sub2, pred_vertices_sub, pred_vertices_full, hidden_states, att

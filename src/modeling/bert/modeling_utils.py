@@ -1,1 +1,1 @@
-../../../transformers/pytorch_transformers/modeling_utils.py
+from pytorch_transformers.modeling_utils import *

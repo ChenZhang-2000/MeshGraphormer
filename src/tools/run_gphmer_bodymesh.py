@@ -210,9 +210,9 @@ def run(args, train_dataloader, val_dataloader, Graphormer_model, smpl, mesh_sam
         has_2d_joints = annotations['has_2d_joints'].cuda(args.device)
 
         gt_3d_joints = annotations['joints_3d'].cuda(args.device)
-        gt_3d_pelvis = gt_3d_joints[:,cfg.J24_NAME.index('Pelvis'),:3]
-        gt_3d_joints = gt_3d_joints[:,cfg.J24_TO_J14,:] 
-        gt_3d_joints[:,:,:3] = gt_3d_joints[:,:,:3] - gt_3d_pelvis[:, None, :]
+        gt_3d_pelvis = gt_3d_joints[:, cfg.J24_NAME.index('Pelvis'), :3]
+        gt_3d_joints = gt_3d_joints[:, cfg.J24_TO_J14, :]
+        gt_3d_joints[:, :, :3] = gt_3d_joints[:, :, :3] - gt_3d_pelvis[:, None, :]
         has_3d_joints = annotations['has_3d_joints'].cuda(args.device)
 
         gt_pose = annotations['pose'].cuda(args.device)
@@ -232,8 +232,8 @@ def run(args, train_dataloader, val_dataloader, Graphormer_model, smpl, mesh_sam
         gt_vertices_sub2 = gt_vertices_sub2 - gt_smpl_3d_pelvis[:, None, :]
             
         # prepare masks for mask vertex/joint modeling
-        mjm_mask_ = mjm_mask.expand(-1,-1,2051)
-        mvm_mask_ = mvm_mask.expand(-1,-1,2051)
+        mjm_mask_ = mjm_mask.expand(-1, -1, 2051)
+        mvm_mask_ = mvm_mask.expand(-1, -1, 2051)
         meta_masks = torch.cat([mjm_mask_, mvm_mask_], dim=1)
 
         # forward-pass
@@ -254,9 +254,9 @@ def run(args, train_dataloader, val_dataloader, Graphormer_model, smpl, mesh_sam
         # compute 3d joint loss  (where the joints are directly output from transformer)
         loss_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints, gt_3d_joints, has_3d_joints, args.device)
         # compute 3d vertex loss
-        loss_vertices = ( args.vloss_w_sub2 * vertices_loss(criterion_vertices, pred_vertices_sub2, gt_vertices_sub2, has_smpl, args.device) + \
-                            args.vloss_w_sub * vertices_loss(criterion_vertices, pred_vertices_sub, gt_vertices_sub, has_smpl, args.device) + \
-                            args.vloss_w_full * vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl, args.device) )
+        loss_vertices = (args.vloss_w_sub2 * vertices_loss(criterion_vertices, pred_vertices_sub2, gt_vertices_sub2, has_smpl, args.device) + \
+                         args.vloss_w_sub * vertices_loss(criterion_vertices, pred_vertices_sub, gt_vertices_sub, has_smpl, args.device) + \
+                         args.vloss_w_full * vertices_loss(criterion_vertices, pred_vertices, gt_vertices, has_smpl, args.device) )
         # compute 3d joint loss (where the joints are regressed from full mesh)
         loss_reg_3d_joints = keypoint_3d_loss(criterion_keypoints, pred_3d_joints_from_smpl, gt_3d_joints, has_3d_joints, args.device)
         # compute 2d joint loss
@@ -266,8 +266,9 @@ def run(args, train_dataloader, val_dataloader, Graphormer_model, smpl, mesh_sam
         loss_3d_joints = loss_3d_joints + loss_reg_3d_joints
     
         # we empirically use hyperparameters to balance difference losses
-        loss = args.joints_loss_weight*loss_3d_joints + \
-                args.vertices_loss_weight*loss_vertices  + args.vertices_loss_weight*loss_2d_joints
+        loss = args.joints_loss_weight * loss_3d_joints + \
+               args.vertices_loss_weight * loss_vertices + \
+               args.vertices_loss_weight * loss_2d_joints
 
         # update logs
         log_loss_2djoints.update(loss_2d_joints.item(), batch_size)
@@ -723,7 +724,6 @@ def main(args):
             del states
             gc.collect()
             torch.cuda.empty_cache()
-
 
     _model.to(args.device)
     logger.info("Training parameters %s", args)
